@@ -16,6 +16,21 @@ function chatEndpoint(baseURL: string): string {
   return b + "/v1/chat/completions";
 }
 
+// Split inline reasoning out of streamed content. Handles three shapes:
+// - no tags → all answer text
+// - "<think>…"   (open, not yet closed) → everything after <think> is reasoning
+// - "…</think>…" (closed, with or without a leading <think>) → before </think> is
+//   reasoning, after is the answer. (This vLLM emits a bare closing </think>.)
+function splitThink(raw: string): { reasoning: string; text: string } {
+  const close = raw.indexOf("</think>");
+  const open = raw.indexOf("<think>");
+  if (close === -1 && open === -1) return { reasoning: "", text: raw };
+  if (close === -1) return { reasoning: raw.slice(open + 7), text: raw.slice(0, open) };
+  const pre = open === -1 ? "" : raw.slice(0, open);
+  const start = open === -1 ? 0 : open + 7;
+  return { reasoning: raw.slice(start, close), text: pre + raw.slice(close + 8) };
+}
+
 function toOpenAIMessages(messages: readonly ThreadMessage[]) {
   return messages.map((m) => ({
     role: m.role,
@@ -52,6 +67,10 @@ const adapter: ChatModelAdapter = {
           messages: toOpenAIMessages(messages),
           stream: true,
           ...(useTools ? { tools: openaiTools } : {}),
+          // vLLM/Qwen-style switch: skip the <think> phase to save time + tokens
+          ...(s.disableThinking ? { chat_template_kwargs: { enable_thinking: false } } : {}),
+          ...(s.temperature !== "" ? { temperature: Number(s.temperature) } : {}),
+          ...(s.maxTokens !== "" ? { max_tokens: Number(s.maxTokens) } : {}),
         }),
         signal: abortSignal,
       });
@@ -70,7 +89,8 @@ const adapter: ChatModelAdapter = {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let text = "";
+    let rawContent = ""; // accumulated delta.content (may contain <think> tags)
+    let reasoningField = ""; // accumulated delta.reasoning_content (proper field)
     // ponytail: tool_calls are accumulated and streamed so tool-ui can render them,
     // but the result is NOT executed and sent back (no multi-turn tool round-trip).
     // Target vLLM can't do tool calling anyway. Upgrade path: register tools with
@@ -96,7 +116,8 @@ const adapter: ChatModelAdapter = {
         }
         const delta = chunk.choices?.[0]?.delta;
         if (!delta) continue;
-        text += delta.content ?? "";
+        rawContent += delta.content ?? "";
+        reasoningField += delta.reasoning_content ?? "";
         for (const tc of delta.tool_calls ?? []) {
           const id = tc.id ?? `tc_${tc.index}`;
           const prev = toolCalls.get(id);
@@ -107,8 +128,30 @@ const adapter: ChatModelAdapter = {
             args: tc.function?.arguments ?? (prev?.args ?? ""),
           });
         }
+        const parsed = splitThink(rawContent);
+        let reasoning = reasoningField + parsed.reasoning;
+        let text = parsed.text;
+        // Live UX: this model streams its reasoning then ends it with a *bare*
+        // </think> (no opening tag). Until that closer arrives we can't tell
+        // reasoning from answer, so it would flash as answer text then collapse.
+        // ponytail: while thinking is on and no tag has appeared yet, treat the
+        // stream as reasoning so it flows into the collapsible block live. Assumes
+        // a reasoning reply eventually emits </think>; a tagless direct answer
+        // would render as reasoning (rare, recoverable). Proper fix is server-side
+        // vLLM --reasoning-parser, which emits reasoning_content (handled above).
+        if (
+          !s.disableThinking &&
+          !reasoningField &&
+          rawContent &&
+          !rawContent.includes("<think>") &&
+          !rawContent.includes("</think>")
+        ) {
+          reasoning = rawContent;
+          text = "";
+        }
         yield {
           content: [
+            ...(reasoning ? [{ type: "reasoning" as const, text: reasoning }] : []),
             ...(text ? [{ type: "text" as const, text }] : []),
             ...Array.from(toolCalls.values()).map((t) => ({
               type: "tool-call" as const,

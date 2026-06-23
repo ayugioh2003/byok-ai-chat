@@ -14,6 +14,10 @@ export type Settings = {
   apiKey: string;
   model: string;
   toolsEnabled: boolean;
+  disableThinking: boolean;
+  // kept as strings (what the input holds); parsed at request time, empty = omit
+  temperature: string;
+  maxTokens: string;
 };
 
 const SETTINGS_KEY = "chat:settings";
@@ -26,9 +30,20 @@ export function loadSettings(): Settings {
       apiKey: s.apiKey || "",
       model: s.model || "",
       toolsEnabled: !!s.toolsEnabled,
+      disableThinking: !!s.disableThinking,
+      temperature: s.temperature ?? "",
+      maxTokens: s.maxTokens ?? "",
     };
   } catch {
-    return { baseURL: "", apiKey: "", model: "", toolsEnabled: false };
+    return {
+      baseURL: "",
+      apiKey: "",
+      model: "",
+      toolsEnabled: false,
+      disableThinking: false,
+      temperature: "",
+      maxTokens: "",
+    };
   }
 }
 

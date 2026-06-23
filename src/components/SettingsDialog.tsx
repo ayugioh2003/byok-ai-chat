@@ -76,6 +76,45 @@ export function SettingsDialog({
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
+              <Label htmlFor="nothink">停用思考（reasoning）</Label>
+              <p className="text-muted-foreground text-xs">
+                送 enable_thinking:false，跳過 &lt;think&gt; 省時間與 token。
+              </p>
+            </div>
+            <Switch
+              id="nothink"
+              checked={s.disableThinking}
+              onCheckedChange={(v) => setS({ ...s, disableThinking: v })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="temperature">Temperature</Label>
+              <Input
+                id="temperature"
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="留空 = 預設"
+                value={s.temperature}
+                onChange={(e) => setS({ ...s, temperature: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="maxTokens">Max tokens</Label>
+              <Input
+                id="maxTokens"
+                type="number"
+                step="1"
+                min="1"
+                placeholder="留空 = 預設"
+                value={s.maxTokens}
+                onChange={(e) => setS({ ...s, maxTokens: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div className="space-y-0.5">
               <Label htmlFor="tools">啟用工具呼叫</Label>
               <p className="text-muted-foreground text-xs">
                 需端點支援（vLLM 須開 --enable-auto-tool-choice）。
