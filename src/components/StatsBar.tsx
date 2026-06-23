@@ -24,7 +24,7 @@ export function StatsBar({
   const unit = "text-muted-foreground ml-0.5";
 
   return (
-    <div className="fixed top-3 right-3 z-50 rounded-lg border bg-background/80 py-2 pr-2 pl-3 text-xs shadow-sm backdrop-blur-md">
+    <div className="fixed top-16 right-3 z-50 rounded-lg border bg-background/80 py-2 pr-2 pl-3 text-xs shadow-sm backdrop-blur-md">
       <button
         onClick={onDismiss}
         title="隱藏測速（可在設定開回）"
