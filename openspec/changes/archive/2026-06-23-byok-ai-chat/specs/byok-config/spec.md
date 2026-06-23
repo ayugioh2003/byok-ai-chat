@@ -22,6 +22,17 @@
 - **WHEN** 使用者在未填妥 baseURL 或 model 的情況下嘗試送出訊息
 - **THEN** 系統不發出請求，並提示需先完成連線設定
 
+### Requirement: 推論與生成參數設定
+系統 SHALL 提供可調整、並持久化於 localStorage 的請求參數：停用思考（reasoning）開關、temperature、max_tokens。空值代表不送該參數、沿用端點預設。
+
+#### Scenario: 停用思考
+- **WHEN** 使用者開啟「停用思考」並送出訊息
+- **THEN** 請求帶上 `chat_template_kwargs: { enable_thinking: false }`，模型跳過思考階段直接作答
+
+#### Scenario: 設定 temperature 與 max_tokens
+- **WHEN** 使用者填入 temperature 或 max_tokens 並儲存
+- **THEN** 後續請求帶上對應參數；留空的欄位則不送出
+
 ### Requirement: API key 明文儲存之取捨
 系統 SHALL 以明文將 apiKey 存於 localStorage，並在程式碼以 `ponytail:` 註記此為 BYOK 純前端場景的有意取捨。
 
