@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Thread } from "@/components/assistant-ui/thread";
 import { Button } from "@/components/ui/button";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { StatsBar } from "@/components/StatsBar";
 import { RuntimeProvider } from "@/RuntimeProvider";
 import {
   createConversation,
@@ -105,6 +106,7 @@ export default function App() {
         onOpenChange={setSettingsOpen}
         onSaved={() => setConfigured(isConfigured(loadSettings()))}
       />
+      <StatsBar />
     </div>
   );
 }

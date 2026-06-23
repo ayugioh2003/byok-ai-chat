@@ -6,6 +6,7 @@ import {
   type ThreadMessage,
 } from "@assistant-ui/react";
 import { loadSettings, makeHistoryAdapter } from "@/lib/storage";
+import { setStats } from "@/lib/stats";
 
 // baseURL may be "https://host", "https://host/", or "https://host/v1".
 // Normalise to the chat-completions endpoint.
@@ -54,6 +55,7 @@ const adapter: ChatModelAdapter = {
       function: { name, description: t.description, parameters: t.parameters },
     }));
 
+    const tStart = performance.now();
     let res: Response;
     try {
       res = await fetch(chatEndpoint(s.baseURL), {
@@ -66,6 +68,7 @@ const adapter: ChatModelAdapter = {
           model: s.model,
           messages: toOpenAIMessages(messages),
           stream: true,
+          stream_options: { include_usage: true },
           ...(useTools ? { tools: openaiTools } : {}),
           // vLLM/Qwen-style switch: skip the <think> phase to save time + tokens
           ...(s.disableThinking ? { chat_template_kwargs: { enable_thinking: false } } : {}),
@@ -91,6 +94,8 @@ const adapter: ChatModelAdapter = {
     let buffer = "";
     let rawContent = ""; // accumulated delta.content (may contain <think> tags)
     let reasoningField = ""; // accumulated delta.reasoning_content (proper field)
+    let tFirst = 0; // time of first token
+    let usage: { prompt_tokens?: number; completion_tokens?: number } | null = null;
     // ponytail: tool_calls are accumulated and streamed so tool-ui can render them,
     // but the result is NOT executed and sent back (no multi-turn tool round-trip).
     // Target vLLM can't do tool calling anyway. Upgrade path: register tools with
@@ -114,8 +119,10 @@ const adapter: ChatModelAdapter = {
         } catch {
           continue; // tolerate keep-alive / non-JSON lines
         }
+        if (chunk.usage) usage = chunk.usage; // final usage chunk (choices empty)
         const delta = chunk.choices?.[0]?.delta;
         if (!delta) continue;
+        if (!tFirst && (delta.content || delta.reasoning_content)) tFirst = performance.now();
         rawContent += delta.content ?? "";
         reasoningField += delta.reasoning_content ?? "";
         for (const tc of delta.tool_calls ?? []) {
@@ -163,6 +170,20 @@ const adapter: ChatModelAdapter = {
           ],
         };
       }
+    }
+
+    // publish speed stats for this run (kept out of message content)
+    const tEnd = performance.now();
+    if (tFirst) {
+      const completion = usage?.completion_tokens;
+      const estimated = completion == null;
+      setStats({
+        ttftMs: tFirst - tStart,
+        genMs: tEnd - tFirst,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: completion ?? Math.round(rawContent.length / 4),
+        estimated,
+      });
     }
   },
 };
