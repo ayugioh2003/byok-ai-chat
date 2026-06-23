@@ -36,6 +36,10 @@ TBD - created by archiving change byok-ai-chat. Update Purpose after archive.
 - **WHEN** 使用者填入 temperature 或 max_tokens 並儲存
 - **THEN** 後續請求帶上對應參數；留空的欄位則不送出
 
+#### Scenario: 顯示測速開關
+- **WHEN** 使用者切換「顯示測速」並儲存
+- **THEN** 設定持久化，控制速度指標列是否顯示（預設開）
+
 ### Requirement: API key 明文儲存之取捨
 系統 SHALL 以明文將 apiKey 存於 localStorage，並在程式碼以 `ponytail:` 註記此為 BYOK 純前端場景的有意取捨。
 

@@ -2,7 +2,18 @@
 
 純前端 AI 聊天 web app。使用者自帶 OpenAI 相容端點（baseURL / apiKey / model），瀏覽器直連並串流。無後端、無資料庫，設定與對話紀錄都存在瀏覽器的 localStorage。
 
+**線上 Demo**：https://ayugioh2003.github.io/byok-ai-chat/ （需自備端點，見下方設定）
+
 技術棧：React + Vite + Tailwind v4 + shadcn/ui + [assistant-ui](https://www.assistant-ui.com)。
+
+## 功能
+
+- 自帶 OpenAI 相容端點，瀏覽器直連並**串流**回應
+- **多對話**：建立 / 切換 / 刪除，對話紀錄存 localStorage
+- **推論折疊**：把 `<think>` / `reasoning_content` 收進可折疊區塊，預設收合
+- **參數控制**：停用思考（`enable_thinking:false`）、temperature、max_tokens
+- **回應測速**：每次回應顯示輸入/輸出 token、輸出速度、TTFT（可關）
+- 工具呼叫 UI 已接好但預設休眠（見下）
 
 ## 開發
 
@@ -24,7 +35,7 @@ npm run build    # 產出 dist/（純靜態）
 
 `npm run build` 後把 `dist/` 丟到任一靜態主機即可。`vite.config.ts` 已設 `base: './'`，可在任意子路徑下運作（GitHub Pages 專案頁也行）。單一路由、無 client router，不需 SPA fallback。
 
-- **GitHub Pages**：把 `dist/` push 到 `gh-pages` 分支，或用 actions 部署。
+- **GitHub Pages**：本 repo 已含 `.github/workflows/deploy.yml`，push 到 `main` 即自動 build + 部署（Pages 來源設為 GitHub Actions）。
 - **Cloudflare Pages / Vercel**：build command `npm run build`，output 目錄 `dist`。
 
 ## 工具呼叫（tool calling）

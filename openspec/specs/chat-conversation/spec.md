@@ -47,3 +47,18 @@ TBD - created by archiving change byok-ai-chat. Update Purpose after archive.
 - **WHEN** 端點回傳非 2xx（如 401 金鑰錯誤、400 參數錯誤）
 - **THEN** 系統顯示該錯誤訊息，協助使用者判斷是 key、model 還是參數問題
 
+### Requirement: 回應速度量測顯示
+系統 SHALL 量測並顯示每次回應的速度指標，且不污染對話內容、context 或持久化。請求帶 `stream_options.include_usage` 取得精準 token 數；顯示與否由設定開關控制（預設開），並可一鍵隱藏。
+
+#### Scenario: 顯示速度指標
+- **WHEN** 一次回應串流完成
+- **THEN** 顯示輸入 token 數、輸出 token 數、輸出速度（tok/s，端到端觀測）、TTFT，以及輸入 prefill 速度概估（標示為概估）
+
+#### Scenario: token 數來源
+- **WHEN** 端點回傳 usage
+- **THEN** token 數採用伺服器 usage（精準）；端點未回傳時改為估算並標示
+
+#### Scenario: 開關控制
+- **WHEN** 使用者於設定關閉「顯示測速」或點擊指標列的關閉鍵
+- **THEN** 指標列隱藏，且選擇持久化於 localStorage
+
