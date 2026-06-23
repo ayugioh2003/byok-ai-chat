@@ -18,6 +18,7 @@ export type Settings = {
   // kept as strings (what the input holds); parsed at request time, empty = omit
   temperature: string;
   maxTokens: string;
+  showStats: boolean;
 };
 
 const SETTINGS_KEY = "chat:settings";
@@ -33,6 +34,7 @@ export function loadSettings(): Settings {
       disableThinking: !!s.disableThinking,
       temperature: s.temperature ?? "",
       maxTokens: s.maxTokens ?? "",
+      showStats: s.showStats ?? true,
     };
   } catch {
     return {
@@ -43,6 +45,7 @@ export function loadSettings(): Settings {
       disableThinking: false,
       temperature: "",
       maxTokens: "",
+      showStats: true,
     };
   }
 }

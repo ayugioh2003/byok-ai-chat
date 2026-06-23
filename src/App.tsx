@@ -10,6 +10,7 @@ import {
   isConfigured,
   listConversations,
   loadSettings,
+  saveSettings,
 } from "@/lib/storage";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string>("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [configured, setConfigured] = useState(() => isConfigured(loadSettings()));
+  const [showStats, setShowStats] = useState(() => loadSettings().showStats);
 
   // ensure at least one conversation exists, and pick an active one
   useEffect(() => {
@@ -104,9 +106,19 @@ export default function App() {
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        onSaved={() => setConfigured(isConfigured(loadSettings()))}
+        onSaved={() => {
+          const s = loadSettings();
+          setConfigured(isConfigured(s));
+          setShowStats(s.showStats);
+        }}
       />
-      <StatsBar />
+      <StatsBar
+        enabled={showStats}
+        onDismiss={() => {
+          saveSettings({ ...loadSettings(), showStats: false });
+          setShowStats(false);
+        }}
+      />
     </div>
   );
 }

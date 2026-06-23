@@ -115,6 +115,19 @@ export function SettingsDialog({
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
+              <Label htmlFor="stats">顯示測速</Label>
+              <p className="text-muted-foreground text-xs">
+                右上角顯示 TTFT 與輸入/輸出速度。
+              </p>
+            </div>
+            <Switch
+              id="stats"
+              checked={s.showStats}
+              onCheckedChange={(v) => setS({ ...s, showStats: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div className="space-y-0.5">
               <Label htmlFor="tools">啟用工具呼叫</Label>
               <p className="text-muted-foreground text-xs">
                 需端點支援（vLLM 須開 --enable-auto-tool-choice）。
