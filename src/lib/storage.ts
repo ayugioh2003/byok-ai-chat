@@ -15,6 +15,9 @@ export type Settings = {
   model: string;
   toolsEnabled: boolean;
   disableThinking: boolean;
+  // global default system prompt; injected (when non-empty) at the front of every
+  // request as a system message. Set by the user, never hardcoded in repo.
+  systemPrompt: string;
   // kept as strings (what the input holds); parsed at request time, empty = omit
   temperature: string;
   maxTokens: string;
@@ -32,6 +35,7 @@ export function loadSettings(): Settings {
       model: s.model || "",
       toolsEnabled: !!s.toolsEnabled,
       disableThinking: !!s.disableThinking,
+      systemPrompt: s.systemPrompt ?? "",
       temperature: s.temperature ?? "",
       maxTokens: s.maxTokens ?? "",
       showStats: s.showStats ?? true,
@@ -43,6 +47,7 @@ export function loadSettings(): Settings {
       model: "",
       toolsEnabled: false,
       disableThinking: false,
+      systemPrompt: "",
       temperature: "",
       maxTokens: "",
       showStats: true,

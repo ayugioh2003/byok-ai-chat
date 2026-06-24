@@ -22,7 +22,7 @@ TBD - created by archiving change byok-ai-chat. Update Purpose after archive.
 - **THEN** 系統累加 content 並更新畫面，遇到不認得的欄位不報錯
 
 ### Requirement: 推論內容折疊顯示
-系統 SHALL 將模型的推論（reasoning）內容與最終答案分離，並以可折疊區塊呈現推論：預設收合、可點擊展開，串流期間即時更新。推論來源同時支援 `reasoning_content` 串流欄位與行內 `<think>...</think>` 標記。
+系統 SHALL 將模型的推論（reasoning）內容與最終答案分離，並以可折疊區塊呈現推論：預設收合、可點擊展開，串流期間即時更新。推論來源同時支援串流欄位（`reasoning_content` 或 `reasoning`，依端點 build 而定）與行內標記（`<think>...</think>` 或 `<thinking>...</thinking>`）。
 
 #### Scenario: 推論流入折疊區塊
 - **WHEN** 模型回應包含推論內容

@@ -74,6 +74,20 @@ export function SettingsDialog({
               onChange={(e) => setS({ ...s, model: e.target.value })}
             />
           </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="systemPrompt">預設 system prompt</Label>
+            <textarea
+              id="systemPrompt"
+              rows={4}
+              placeholder="角色設定／習慣／立場（留空則不送）。例：You are based in Taiwan, use traditional Chinese terms (台灣/中華民國), do not use PRC framing."
+              className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+              value={s.systemPrompt}
+              onChange={(e) => setS({ ...s, systemPrompt: e.target.value })}
+            />
+            <p className="text-muted-foreground text-xs">
+              每次請求前以 system 訊息注入。推論模型的 &lt;think&gt; 仍可能受語料影響，可搭配「停用思考」更穩。
+            </p>
+          </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
               <Label htmlFor="nothink">停用思考（reasoning）</Label>

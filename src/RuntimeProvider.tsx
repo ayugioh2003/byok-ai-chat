@@ -17,19 +17,25 @@ function chatEndpoint(baseURL: string): string {
   return b + "/v1/chat/completions";
 }
 
+// Inline reasoning tags vary by model: <think>/<thinking> (and their closers).
+const THINK_OPEN = /<think(?:ing)?>/;
+const THINK_CLOSE = /<\/think(?:ing)?>/;
+
 // Split inline reasoning out of streamed content. Handles three shapes:
 // - no tags → all answer text
-// - "<think>…"   (open, not yet closed) → everything after <think> is reasoning
-// - "…</think>…" (closed, with or without a leading <think>) → before </think> is
+// - "<think>…"   (open, not yet closed) → everything after the tag is reasoning
+// - "…</think>…" (closed, with or without a leading open tag) → before the closer is
 //   reasoning, after is the answer. (This vLLM emits a bare closing </think>.)
 function splitThink(raw: string): { reasoning: string; text: string } {
-  const close = raw.indexOf("</think>");
-  const open = raw.indexOf("<think>");
+  const closeM = raw.match(THINK_CLOSE);
+  const openM = raw.match(THINK_OPEN);
+  const close = closeM ? closeM.index! : -1;
+  const open = openM ? openM.index! : -1;
   if (close === -1 && open === -1) return { reasoning: "", text: raw };
-  if (close === -1) return { reasoning: raw.slice(open + 7), text: raw.slice(0, open) };
+  if (close === -1) return { reasoning: raw.slice(open + openM![0].length), text: raw.slice(0, open) };
   const pre = open === -1 ? "" : raw.slice(0, open);
-  const start = open === -1 ? 0 : open + 7;
-  return { reasoning: raw.slice(start, close), text: pre + raw.slice(close + 8) };
+  const start = open === -1 ? 0 : open + openM![0].length;
+  return { reasoning: raw.slice(start, close), text: pre + raw.slice(close + closeM![0].length) };
 }
 
 function toOpenAIMessages(messages: readonly ThreadMessage[]) {
@@ -66,7 +72,10 @@ const adapter: ChatModelAdapter = {
         },
         body: JSON.stringify({
           model: s.model,
-          messages: toOpenAIMessages(messages),
+          messages: [
+            ...(s.systemPrompt.trim() ? [{ role: "system", content: s.systemPrompt }] : []),
+            ...toOpenAIMessages(messages),
+          ],
           stream: true,
           stream_options: { include_usage: true },
           ...(useTools ? { tools: openaiTools } : {}),
@@ -124,7 +133,11 @@ const adapter: ChatModelAdapter = {
         if (!delta) continue;
         if (!tFirst && (delta.content || delta.reasoning_content)) tFirst = performance.now();
         rawContent += delta.content ?? "";
-        reasoningField += delta.reasoning_content ?? "";
+        // reasoning field name varies by vLLM build: some emit `reasoning_content`,
+        // others a bare `reasoning`. Accept either so the CoT lands in the reasoning
+        // block (and, being non-empty, stops the live heuristic below from mislabelling
+        // the answer content as reasoning).
+        reasoningField += delta.reasoning_content ?? delta.reasoning ?? "";
         for (const tc of delta.tool_calls ?? []) {
           const id = tc.id ?? `tc_${tc.index}`;
           const prev = toolCalls.get(id);
@@ -150,8 +163,8 @@ const adapter: ChatModelAdapter = {
           !s.disableThinking &&
           !reasoningField &&
           rawContent &&
-          !rawContent.includes("<think>") &&
-          !rawContent.includes("</think>")
+          !THINK_OPEN.test(rawContent) &&
+          !THINK_CLOSE.test(rawContent)
         ) {
           reasoning = rawContent;
           text = "";
