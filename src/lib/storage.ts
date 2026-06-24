@@ -9,15 +9,18 @@ import {
 // BYOK, no-backend, single-user tool (same as every other BYOK chat). XSS could
 // read it; we mitigate by not loading third-party scripts. Upgrade path if ever
 // needed: WebCrypto-encrypt with a user passphrase. Not now (YAGNI).
+// A named system-prompt preset. The active one (if any) is injected as a system
+// message at the front of every request. Content is user-set, never hardcoded.
+export type SystemPrompt = { id: string; name: string; content: string };
+
 export type Settings = {
   baseURL: string;
   apiKey: string;
   model: string;
   toolsEnabled: boolean;
   disableThinking: boolean;
-  // global default system prompt; injected (when non-empty) at the front of every
-  // request as a system message. Set by the user, never hardcoded in repo.
-  systemPrompt: string;
+  systemPrompts: SystemPrompt[];
+  activeSystemPromptId: string | null; // null = none active → no system message
   // kept as strings (what the input holds); parsed at request time, empty = omit
   temperature: string;
   maxTokens: string;
@@ -26,33 +29,52 @@ export type Settings = {
 
 const SETTINGS_KEY = "chat:settings";
 
+const DEFAULTS: Settings = {
+  baseURL: "",
+  apiKey: "",
+  model: "",
+  toolsEnabled: false,
+  disableThinking: false,
+  systemPrompts: [],
+  activeSystemPromptId: null,
+  temperature: "",
+  maxTokens: "",
+  showStats: true,
+};
+
 export function loadSettings(): Settings {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    let systemPrompts: SystemPrompt[] = Array.isArray(s.systemPrompts) ? s.systemPrompts : [];
+    let activeSystemPromptId: string | null = s.activeSystemPromptId ?? null;
+    // migrate the legacy single `systemPrompt` string into one preset (stable id so
+    // it doesn't churn across loads before the user next saves).
+    if (!systemPrompts.length && s.systemPrompt) {
+      systemPrompts = [{ id: "legacy", name: "預設", content: s.systemPrompt }];
+      activeSystemPromptId = "legacy";
+    }
     return {
+      ...DEFAULTS,
       baseURL: s.baseURL || "",
       apiKey: s.apiKey || "",
       model: s.model || "",
       toolsEnabled: !!s.toolsEnabled,
       disableThinking: !!s.disableThinking,
-      systemPrompt: s.systemPrompt ?? "",
+      systemPrompts,
+      activeSystemPromptId,
       temperature: s.temperature ?? "",
       maxTokens: s.maxTokens ?? "",
       showStats: s.showStats ?? true,
     };
   } catch {
-    return {
-      baseURL: "",
-      apiKey: "",
-      model: "",
-      toolsEnabled: false,
-      disableThinking: false,
-      systemPrompt: "",
-      temperature: "",
-      maxTokens: "",
-      showStats: true,
-    };
+    return { ...DEFAULTS };
   }
+}
+
+// Resolve the active preset's content, or "" if none active / empty.
+export function activeSystemPrompt(s: Settings): string {
+  const p = s.systemPrompts.find((x) => x.id === s.activeSystemPromptId);
+  return p?.content ?? "";
 }
 
 export function saveSettings(s: Settings) {

@@ -47,18 +47,22 @@ TBD - created by archiving change byok-ai-chat. Update Purpose after archive.
 - **WHEN** 使用者儲存含 apiKey 的設定
 - **THEN** apiKey 以明文存入 localStorage（不加密），且程式碼註記此取捨與加密升級路徑
 
-### Requirement: 預設 system prompt 設定與注入
-系統 SHALL 提供一項可持久化於 `localStorage` 的「預設 system prompt」設定，並在該值非空時，於每次請求前以 `system` role 注入到送往端點的 messages 最前。空值代表不注入任何 system 訊息。
+### Requirement: system prompt 多組管理與注入
+系統 SHALL 提供可持久化於 `localStorage` 的多組具名 system prompt（每組含名稱與內容），並支援新增、切換、修改、刪除。系統 SHALL 記錄目前「啟用中」的一組；當啟用中的內容非空時，於每次請求前以 `system` role 注入到送往端點的 messages 最前。未啟用任何組、或啟用中內容為空（或僅空白）時，不注入任何 system 訊息。舊版單一字串設定 SHALL 自動遷移為一組 preset。
 
-#### Scenario: 填入並儲存預設 prompt
-- **WHEN** 使用者在設定面板的「預設 system prompt」欄填入文字並按儲存
-- **THEN** 該文字寫入 localStorage，重新整理後設定面板自動帶回原值
+#### Scenario: 新增與切換
+- **WHEN** 使用者新增一組 prompt，或從清單切換啟用中的組別並儲存
+- **THEN** 組別與「啟用中」選擇寫入 localStorage，重新整理後保留
 
-#### Scenario: 非空時注入 system 訊息
-- **WHEN** 已設定非空的預設 system prompt 的使用者送出訊息
-- **THEN** 送往端點的 messages 最前多一則 `{ role: "system", content: <該值> }`，其後接續對話訊息
+#### Scenario: 修改與刪除
+- **WHEN** 使用者修改某組的名稱／內容、或刪除某組並儲存
+- **THEN** 變更持久化；刪除啟用中的組後，回到「未啟用」狀態
 
-#### Scenario: 留空時不注入
-- **WHEN** 預設 system prompt 為空（或僅空白）的使用者送出訊息
+#### Scenario: 啟用中且非空時注入
+- **WHEN** 啟用中的組別內容非空，使用者送出訊息
+- **THEN** 送往端點的 messages 最前多一則 `{ role: "system", content: <啟用中內容> }`，其後接續對話訊息
+
+#### Scenario: 未啟用或空內容時不注入
+- **WHEN** 未啟用任何組，或啟用中內容為空（或僅空白），使用者送出訊息
 - **THEN** 送往端點的 messages 不含任何 system 訊息，行為與未設定時一致
 

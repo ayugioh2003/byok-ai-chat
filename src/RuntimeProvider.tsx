@@ -5,7 +5,7 @@ import {
   type ChatModelAdapter,
   type ThreadMessage,
 } from "@assistant-ui/react";
-import { loadSettings, makeHistoryAdapter } from "@/lib/storage";
+import { loadSettings, activeSystemPrompt, makeHistoryAdapter } from "@/lib/storage";
 import { setStats } from "@/lib/stats";
 
 // baseURL may be "https://host", "https://host/", or "https://host/v1".
@@ -51,6 +51,7 @@ function toOpenAIMessages(messages: readonly ThreadMessage[]) {
 const adapter: ChatModelAdapter = {
   async *run({ messages, abortSignal, context }) {
     const s = loadSettings();
+    const sysPrompt = activeSystemPrompt(s);
     // ponytail: no tools are registered in this app yet — tool-calling is wired but
     // dormant. context.tools fills in once a tool is registered (useAssistantTool /
     // makeAssistantTool); then enabling the toggle sends them. Until then this is [].
@@ -73,7 +74,7 @@ const adapter: ChatModelAdapter = {
         body: JSON.stringify({
           model: s.model,
           messages: [
-            ...(s.systemPrompt.trim() ? [{ role: "system", content: s.systemPrompt }] : []),
+            ...(sysPrompt.trim() ? [{ role: "system", content: sysPrompt }] : []),
             ...toOpenAIMessages(messages),
           ],
           stream: true,

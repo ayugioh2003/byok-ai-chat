@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { loadSettings, saveSettings, type Settings } from "@/lib/storage";
+import { loadSettings, saveSettings, type Settings, type SystemPrompt } from "@/lib/storage";
 
 export function SettingsDialog({
   open,
@@ -34,6 +34,28 @@ export function SettingsDialog({
     saveSettings({ ...s, baseURL: s.baseURL.trim(), apiKey: s.apiKey.trim(), model: s.model.trim() });
     onSaved();
     onOpenChange(false);
+  }
+
+  // ── system prompt presets ──
+  const active = s.systemPrompts.find((p) => p.id === s.activeSystemPromptId) ?? null;
+  function addPreset() {
+    const p: SystemPrompt = { id: crypto.randomUUID(), name: "新提示詞", content: "" };
+    setS({ ...s, systemPrompts: [...s.systemPrompts, p], activeSystemPromptId: p.id });
+  }
+  function patchActive(patch: Partial<SystemPrompt>) {
+    setS({
+      ...s,
+      systemPrompts: s.systemPrompts.map((p) =>
+        p.id === s.activeSystemPromptId ? { ...p, ...patch } : p,
+      ),
+    });
+  }
+  function deleteActive() {
+    setS({
+      ...s,
+      systemPrompts: s.systemPrompts.filter((p) => p.id !== s.activeSystemPromptId),
+      activeSystemPromptId: null,
+    });
   }
 
   return (
@@ -75,18 +97,53 @@ export function SettingsDialog({
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="systemPrompt">預設 system prompt</Label>
-            <textarea
-              id="systemPrompt"
-              rows={4}
-              placeholder="角色設定／習慣／立場（留空則不送）。例：You are based in Taiwan, use traditional Chinese terms (台灣/中華民國), do not use PRC framing."
-              className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-              value={s.systemPrompt}
-              onChange={(e) => setS({ ...s, systemPrompt: e.target.value })}
-            />
-            <p className="text-muted-foreground text-xs">
-              每次請求前以 system 訊息注入。推論模型的 &lt;think&gt; 仍可能受語料影響，可搭配「停用思考」更穩。
-            </p>
+            <Label htmlFor="sysPromptSel">System prompt</Label>
+            <div className="flex gap-2">
+              <select
+                id="sysPromptSel"
+                className="h-8 flex-1 min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+                value={s.activeSystemPromptId ?? ""}
+                onChange={(e) => setS({ ...s, activeSystemPromptId: e.target.value || null })}
+              >
+                <option value="">（不啟用）</option>
+                {s.systemPrompts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name || "（未命名）"}
+                  </option>
+                ))}
+              </select>
+              <Button type="button" variant="outline" onClick={addPreset}>
+                ＋ 新增
+              </Button>
+            </div>
+            {active ? (
+              <>
+                <Input
+                  placeholder="名稱"
+                  value={active.name}
+                  onChange={(e) => patchActive({ name: e.target.value })}
+                />
+                <textarea
+                  rows={4}
+                  placeholder="角色設定／習慣／立場。例：You are based in Taiwan, use traditional Chinese terms (台灣/中華民國), do not use PRC framing."
+                  className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+                  value={active.content}
+                  onChange={(e) => patchActive({ content: e.target.value })}
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-muted-foreground text-xs">
+                    啟用的 prompt 以 system 訊息注入每次請求。&lt;think&gt; 仍可能受語料影響，可搭配「停用思考」更穩。
+                  </p>
+                  <Button type="button" variant="destructive" size="sm" onClick={deleteActive}>
+                    刪除
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                未啟用任何 system prompt。按「＋ 新增」建立，或從上方選擇切換。
+              </p>
+            )}
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
